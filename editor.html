@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blog App - Editor</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <nav class="container">
+            <div class="logo">My Blog App</div>
+            <ul class="nav-links" id="auth-links">
+                <li><a href="index.html">Home</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <div class="container">
+            <div class="editor-container">
+                <h1 class="editor-title" id="editor-title">Create New Blog</h1>
+                
+                <div id="message-container"></div>
+
+                <form id="blog-form">
+                    <div class="form-group">
+                        <label for="blog-title">Title</label>
+                        <input type="text" id="blog-title" name="title" required placeholder="Enter your blog title">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="blog-content">Content</label>
+                        <textarea id="blog-content" name="content" required placeholder="Write your blog content here..."></textarea>
+                    </div>
+                    
+                    <div class="btn-group">
+                        <button type="submit" class="btn" id="submit-btn">Publish</button>
+                        <a href="index.html" class="btn btn-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 My Blog App. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="app.js"></script>
+    <script>
+        const blogForm = document.getElementById('blog-form');
+        const blogTitleInput = document.getElementById('blog-title');
+        const blogContentInput = document.getElementById('blog-content');
+        const submitBtn = document.getElementById('submit-btn');
+        const editorTitle = document.getElementById('editor-title');
+        const messageContainer = document.getElementById('message-container');
+
+        let editMode = false;
+        let editBlogId = null;
+
+        // Check if editing existing blog
+        const urlParams = new URLSearchParams(window.location.search);
+        const blogId = urlParams.get('id');
+
+        if (blogId) {
+            editMode = true;
+            editBlogId = blogId;
+            loadBlogForEdit(blogId);
+        }
+
+        async function loadBlogForEdit(id) {
+            const result = await getBlog(id);
+            
+            if (result.success) {
+                const blog = result.blog;
+                
+                // Check if user owns this blog
+                if (!currentUser || blog.user_id !== currentUser.id) {
+                    showLocalMessage('You can only edit your own blogs', 'error');
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 2000);
+                    return;
+                }
+                
+                blogTitleInput.value = blog.title;
+                blogContentInput.value = blog.content;
+                editorTitle.textContent = 'Edit Blog';
+                submitBtn.textContent = 'Update';
+            } else {
+                showLocalMessage('Failed to load blog', 'error');
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 2000);
+            }
+        }
+
+        // Handle form submission
+        blogForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const title = blogTitleInput.value.trim();
+            const content = blogContentInput.value.trim();
+            
+            if (!title || !content) {
+                showLocalMessage('Please fill in all fields', 'error');
+                return;
+            }
+            
+            submitBtn.disabled = true;
+            submitBtn.textContent = editMode ? 'Updating...' : 'Publishing...';
+            
+            let result;
+            if (editMode) {
+                result = await updateBlog(editBlogId, title, content);
+            } else {
+                result = await createBlog(title, content);
+            }
+            
+            if (result.success) {
+                showLocalMessage(result.message, 'success');
+                setTimeout(() => {
+                    if (editMode) {
+                        window.location.href = `view.html?id=${editBlogId}`;
+                    } else {
+                        window.location.href = 'index.html';
+                    }
+                }, 1500);
+            } else {
+                showLocalMessage(result.message, 'error');
+                submitBtn.disabled = false;
+                submitBtn.textContent = editMode ? 'Update' : 'Publish';
+            }
+        });
+
+        function showLocalMessage(message, type) {
+            messageContainer.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+        }
+
+        // Check authentication
+        setTimeout(() => {
+            if (!currentUser) {
+                window.location.href = 'auth.html';
+            }
+        }, 500);
+    </script>
+</body>
+</html>

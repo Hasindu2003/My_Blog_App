@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blog App - View Blog</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <nav class="container">
+            <div class="logo">My Blog App</div>
+            <ul class="nav-links" id="auth-links">
+                <li><a href="index.html">Home</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <div class="container">
+            <div id="blog-view-container">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading blog...</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 My Blog App. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="app.js"></script>
+    <script>
+        const blogViewContainer = document.getElementById('blog-view-container');
+        
+        // Get blog ID from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const blogId = urlParams.get('id');
+
+        if (!blogId) {
+            blogViewContainer.innerHTML = `
+                <div class="alert alert-error">
+                    No blog ID provided
+                </div>
+            `;
+        } else {
+            loadBlog(blogId);
+        }
+
+        async function loadBlog(id) {
+            const result = await getBlog(id);
+            
+            if (result.success) {
+                const blog = result.blog;
+                const isOwner = currentUser && currentUser.id === blog.user_id;
+                
+                blogViewContainer.innerHTML = `
+                    <div class="blog-view">
+                        <h1 class="blog-title">${escapeHtml(blog.title)}</h1>
+                        <div class="blog-meta">
+                            By ${escapeHtml(blog.username)} | ${formatDate(blog.created_at)}
+                            ${blog.updated_at !== blog.created_at ? ` | Updated: ${formatDate(blog.updated_at)}` : ''}
+                        </div>
+                        <div class="blog-content">${escapeHtml(blog.content)}</div>
+                        ${isOwner ? `
+                            <div class="btn-group">
+                                <a href="editor.html?id=${blog.id}" class="btn">Edit</a>
+                                <button onclick="handleDelete(${blog.id})" class="btn btn-danger">Delete</button>
+                            </div>
+                        ` : ''}
+                        <div style="margin-top: 2rem;">
+                            <a href="index.html" class="btn btn-secondary">Back to Home</a>
+                        </div>
+                    </div>
+                `;
+            } else {
+                blogViewContainer.innerHTML = `
+                    <div class="alert alert-error">
+                        ${result.message || 'Failed to load blog'}
+                    </div>
+                    <div style="margin-top: 1rem;">
+                        <a href="index.html" class="btn">Back to Home</a>
+                    </div>
+                `;
+            }
+        }
+
+        async function handleDelete(id) {
+            const result = await deleteBlog(id);
+            
+            if (result.success) {
+                showMessage('Blog deleted successfully', 'success');
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 1500);
+            } else if (result.message !== 'Cancelled') {
+                showMessage(result.message, 'error');
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Wait for authentication check before loading blog
+        setTimeout(() => {
+            if (blogId && blogViewContainer.innerHTML.includes('Loading')) {
+                loadBlog(blogId);
+            }
+        }, 500);
+    </script>
+</body>
+</html>
