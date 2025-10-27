@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blog App - Home</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <nav class="container">
+            <div class="logo">My Blog App</div>
+            <ul class="nav-links" id="auth-links">
+                <li><a href="auth.html">Login</a></li>
+                <li><a href="auth.html?register=true">Register</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <div class="container">
+            <div class="home-header">
+                <h1>Welcome to My Blog App</h1>
+                <p>Discover amazing stories from our community</p>
+            </div>
+
+            <div id="create-blog-section" class="create-blog-btn hidden">
+                <a href="editor.html" class="btn">Create New Blog</a>
+            </div>
+
+            <div id="blogs-container">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading blogs...</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 My Blog App. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="app.js"></script>
+    <script>
+        // Load blogs on page load
+        async function loadBlogs() {
+            const blogsContainer = document.getElementById('blogs-container');
+            const createBlogSection = document.getElementById('create-blog-section');
+            
+            const result = await getBlogs();
+            
+            if (result.success) {
+                if (result.blogs.length === 0) {
+                    blogsContainer.innerHTML = `
+                        <div class="empty-state">
+                            <h2>No blogs yet</h2>
+                            <p>Be the first to create a blog post!</p>
+                        </div>
+                    `;
+                } else {
+                    blogsContainer.innerHTML = result.blogs.map(blog => `
+                        <div class="blog-card">
+                            <h2 class="blog-title">${escapeHtml(blog.title)}</h2>
+                            <div class="blog-meta">
+                                By ${escapeHtml(blog.username)} | ${formatDate(blog.created_at)}
+                            </div>
+                            <div class="blog-excerpt">
+                                <p class="blog-content">${escapeHtml(truncateText(blog.content, 200))}</p>
+                            </div>
+                            <a href="view.html?id=${blog.id}" class="btn btn-small">Read More</a>
+                        </div>
+                    `).join('');
+                }
+            } else {
+                blogsContainer.innerHTML = `
+                    <div class="alert alert-error">
+                        Failed to load blogs. Please try again later.
+                    </div>
+                `;
+            }
+            
+            // Show create blog button if user is logged in
+            if (currentUser) {
+                createBlogSection.classList.remove('hidden');
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Wait for authentication check, then load blogs
+        setTimeout(() => {
+            loadBlogs();
+        }, 500);
+    </script>
+</body>
+</html>
